@@ -28,20 +28,18 @@ def strip_whitespace_from_text_columns(df, text_cols):
 
 def handle_missing_values(df):
     df = df.copy()
-    if 'quantity' in df.columns:
-        df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce')
+    if 'qty' in df.columns:
+        df['qty'] = pd.to_numeric(df['qty'], errors='coerce')
+        df = df[~df['qty'].isna()]
     if 'price' in df.columns:
         df['price'] = pd.to_numeric(df['price'], errors='coerce')
-    if 'quantity' in df.columns:
-        df = df[~df['quantity'].isna()].copy()
-    if 'price' in df.columns:
         overall_median = df['price'].median(skipna=True)
-        if 'product_name' in df.columns:
-            medians = df.groupby('product_name')['price'].median()
+        if 'prodname' in df.columns:
+            medians = df.groupby('prodname')['price'].median()
             def fill_price(row):
                 if pd.notna(row['price']):
                     return row['price']
-                pname = row.get('product_name', None)
+                pname = row.get('prodname', None)
                 if pname in medians and not pd.isna(medians[pname]):
                     return medians[pname]
                 return overall_median
@@ -52,25 +50,18 @@ def handle_missing_values(df):
 
 def remove_invalid_rows(df):
     df = df.copy()
-    if 'quantity' in df.columns:
-        df['quantity'] = pd.to_numeric(df['quantity'], errors='coerce')
-        df = df[df['quantity'] >= 0].copy()
+    if 'qty' in df.columns:
+        df['qty'] = pd.to_numeric(df['qty'], errors='coerce')
+        df = df[df['qty'] >= 0]
     if 'price' in df.columns:
         df['price'] = pd.to_numeric(df['price'], errors='coerce')
-        df = df[df['price'] >= 0].copy()
-    cols_to_check = [c for c in ['price','quantity'] if c in df.columns]
-    if cols_to_check:
-        df = df.dropna(subset=cols_to_check)
+        df = df[df['price'] >= 0]
     return df
 
 def run_cleaning_pipeline(raw_path):
     df_raw = load_data(raw_path)
     df = clean_column_names(df_raw)
-    likely_text_cols = []
-    for c in ['product_name','product','category','category_name','item']:
-        if c in df.columns:
-            likely_text_cols.append(c)
-    df = strip_whitespace_from_text_columns(df, likely_text_cols)
+    df = strip_whitespace_from_text_columns(df, ['prodname','category'])
     df = handle_missing_values(df)
     df = remove_invalid_rows(df)
     return df
